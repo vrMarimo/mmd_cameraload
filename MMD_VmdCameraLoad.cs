@@ -2,17 +2,22 @@
 using System.Runtime.InteropServices;
 
 public class MMD_VmdCameraLoad : MonoBehaviour {
+    //v1.1
 
     public TextAsset Select_VMD;     //vmdファイル
     public GameObject CameraCenter;  //カメラ中心
     public Camera MainCamera;        //カメラ
-    public int waitframe = 0;        //どうしてもモデルモーションと同期ができない時用の待機フレーム
+    public GameObject MMD_model;
     public static bool animflg = false;//再生用のフラグ
 
     private bool success = false;    //データの準備完了フラグ
-    private int thisframe = 1;
     private float timeleft;
     CameraData[] Cam_m;
+    private int t = 0;
+    private float t_f = 0.0f;
+    private Animator target_animator;
+    private float nowframe = 0.0f;
+
     const int HEADER = 50;            //ヘッダーの桁数
     const int MOTIONCOUNT = 4;        //モーションレコード数
     const int MOTIONDATA = 111;       //モーションデータ（レコード数分）
@@ -23,7 +28,7 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
     const int ILLUMINATIONCOUNT = 4;  //照明レコード数
     const int ILLUMINATIONDATA = 28;  //照明データ（レコード数分）
     const int SHADOWCOUNT = 4;        //シャドウレコード数
-    const int SHADOWDATA = 9;         //シャドウデータ（レコード数分）    
+    const int SHADOWDATA = 9;         //シャドウデータ（レコード数分）  
 
     [StructLayout(LayoutKind.Explicit)]
     public struct Union
@@ -52,8 +57,12 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
         public float viewAngle; //視野角
 
         public int[] Bezier;    //ベジェ曲線の補間パラメータ
+        public bool originalframe;
     }
-
+    void Awake()
+    {
+        target_animator = MMD_model.GetComponent<Animator>();
+    }
     // Use this for initialization
     void Start () {
 
@@ -114,6 +123,7 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
 
         //３次ベジェ曲線補間
         Cam_m[0] = Cam[0];//１レコード目をコピー
+        Cam_m[0].originalframe = true;
         int Addframe = 0;
         int wIndex = 1;
 
@@ -126,70 +136,97 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
                 Cam_m[wIndex].Pos_x = Cam[i].Pos_x + (Cam[i + 1].Pos_x - Cam[i].Pos_x) * 
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[0], Cam[i + 1].Bezier[2]),
                                                    new Vector2(Cam[i + 1].Bezier[1], Cam[i + 1].Bezier[3]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].Pos_y = Cam[i].Pos_y + (Cam[i + 1].Pos_y - Cam[i].Pos_y) * 
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[4], Cam[i + 1].Bezier[6]),
                                                    new Vector2(Cam[i + 1].Bezier[5], Cam[i + 1].Bezier[7]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].Pos_z = Cam[i].Pos_z + (Cam[i + 1].Pos_z - Cam[i].Pos_z) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[8], Cam[i + 1].Bezier[10]),
                                                    new Vector2(Cam[i + 1].Bezier[9], Cam[i + 1].Bezier[11]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].Rot_x = Cam[i].Rot_x + (Cam[i + 1].Rot_x - Cam[i].Rot_x) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[12], Cam[i + 1].Bezier[14]),
                                                    new Vector2(Cam[i + 1].Bezier[13], Cam[i + 1].Bezier[15]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].Rot_y = Cam[i].Rot_y + (Cam[i + 1].Rot_y - Cam[i].Rot_y) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[12], Cam[i + 1].Bezier[14]),
                                                    new Vector2(Cam[i + 1].Bezier[13], Cam[i + 1].Bezier[15]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].Rot_z = Cam[i].Rot_z + (Cam[i + 1].Rot_z - Cam[i].Rot_z) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[12], Cam[i + 1].Bezier[14]),
                                                    new Vector2(Cam[i + 1].Bezier[13], Cam[i + 1].Bezier[15]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].distans = Cam[i].distans + (Cam[i + 1].distans - Cam[i].distans) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[16], Cam[i + 1].Bezier[18]),
                                                    new Vector2(Cam[i + 1].Bezier[17], Cam[i + 1].Bezier[19]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 Cam_m[wIndex].viewAngle = Cam[i].viewAngle + (Cam[i + 1].viewAngle - Cam[i].viewAngle) *
                                       (int)(BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[20], Cam[i + 1].Bezier[22]),
                                                         new Vector2(Cam[i + 1].Bezier[21], Cam[i + 1].Bezier[23]), new Vector2(127, 127),
-                                                        (float)(1.0 * j / (Addframe - 1))).y) / 128;
+                                                        (float)(1.0 * j / (Addframe - 1))).y) / 127;
                 wIndex++;
             }
-            Cam_m[wIndex++] = Cam[i + 1];
+            Cam_m[wIndex] = Cam[i + 1];
+            Cam_m[wIndex++].originalframe = true;
         }
         success = true;
     }
 
     private void Update()
     {
-        //スペース押したらカメラスタート
-        if (success && Input.GetKeyDown(KeyCode.Space) && animflg == false)
+        //カメラ情報が完成したらカメラスタート
+        if (success)
         {
-            animflg = true;
-        }
-        if (animflg)
-        {
-            if (waitframe > 0)
+            if (t != (int)nowframe)
             {
-                waitframe--;
+                //新しいフレームの処理
+                t = (int)nowframe;
+                //最終フレームを超えないようにする処理
+                if (t < Cam_m.Length - 1)
+                {
+                    CameraCenter.transform.localPosition = new Vector3(Cam_m[t].Pos_x / 12.5f + MMD_model.transform.localPosition.x,
+                                                                       Cam_m[t].Pos_y / 12.5f + MMD_model.transform.localPosition.y,
+                                                                       Cam_m[t].Pos_z / 12.5f + MMD_model.transform.localPosition.z);
+                    this.transform.localPosition = new Vector3(this.transform.localPosition.x, this.transform.localPosition.y, Cam_m[t].distans / 12.5f);
+                    CameraCenter.transform.rotation = Quaternion.Euler(-Cam_m[t].Rot_x, -Cam_m[t].Rot_y, -Cam_m[t].Rot_z);
+                    MainCamera.fieldOfView = Cam_m[t].viewAngle;
+                }
             }
             else
             {
-                //カメラの移動部分(計算値はモデルの大きさ等によって変わりそうです。)
-                CameraCenter.transform.localPosition = new Vector3(Cam_m[thisframe].Pos_x / 12.5f + 0.17f, Cam_m[thisframe].Pos_y / 12.5f, Cam_m[thisframe].Pos_z / 13.0f + -0.9f);
-                this.transform.localPosition = new Vector3(this.transform.localPosition.x, this.transform.localPosition.y, Cam_m[thisframe].distans / 12.0f);
-                CameraCenter.transform.rotation = Quaternion.Euler(-Cam_m[thisframe].Rot_x, -Cam_m[thisframe].Rot_y, -Cam_m[thisframe].Rot_z);
-                MainCamera.fieldOfView = Cam_m[thisframe].viewAngle;
-                thisframe++;
-                //最終フレームを超えないようにする処理
-                if (thisframe > Cam_m.Length - 1)
+                //同じフレームが再度処理された場合の処理
+                if (t + 1 < Cam_m.Length - 1 && !Cam_m[t + 1].originalframe)
                 {
-                    thisframe = Cam_m.Length - 1;
+                    t_f = nowframe - (int)nowframe;
+                    CameraCenter.transform.localPosition = new Vector3(((Cam_m[t + 1].Pos_x - Cam_m[t].Pos_x) * t_f + Cam_m[t].Pos_x) / 12.5f + MMD_model.transform.localPosition.x,
+                                                                       ((Cam_m[t + 1].Pos_y - Cam_m[t].Pos_y) * t_f + Cam_m[t].Pos_y) / 12.5f + MMD_model.transform.localPosition.y,
+                                                                       ((Cam_m[t + 1].Pos_z - Cam_m[t].Pos_z) * t_f + Cam_m[t].Pos_z) / 12.5f + MMD_model.transform.localPosition.z);
+                    this.transform.localPosition = new Vector3(this.transform.localPosition.x, this.transform.localPosition.y, Cam_m[t].distans / 12.5f);
+                    CameraCenter.transform.rotation = Quaternion.Euler((-Cam_m[t + 1].Rot_x - -Cam_m[t].Rot_x) * t_f + -Cam_m[t].Rot_x,
+                                                                        (-Cam_m[t + 1].Rot_y - -Cam_m[t].Rot_y) * t_f + -Cam_m[t].Rot_y,
+                                                                        (-Cam_m[t + 1].Rot_z - -Cam_m[t].Rot_z) * t_f + -Cam_m[t].Rot_z);
+                    MainCamera.fieldOfView = (Cam_m[t + 1].viewAngle - Cam_m[t].viewAngle) * t_f + Cam_m[t].viewAngle;
                 }
             }
         }
+        nowframe = getAnimationFrame();
+    }
+
+    private float getAnimationFrame()
+    {
+
+        float returnValue = 0.0f;
+
+        var clipInfoList = target_animator.GetCurrentAnimatorClipInfo(0);
+        if (clipInfoList != null)
+        {
+            var clip = clipInfoList[0].clip;
+            var stateInfo = target_animator.GetCurrentAnimatorStateInfo(0);
+            returnValue = clip.length * stateInfo.normalizedTime * clip.frameRate;
+        }
+
+        return returnValue;
     }
 
     float getVmdCamera( ref int index ,byte[] data)
