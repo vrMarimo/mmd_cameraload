@@ -2,16 +2,13 @@
 using System.Runtime.InteropServices;
 
 public class MMD_VmdCameraLoad : MonoBehaviour {
-    //v1.1
 
     public TextAsset Select_VMD;     //vmdファイル
     public GameObject CameraCenter;  //カメラ中心
     public Camera MainCamera;        //カメラ
-    public GameObject MMD_model;
-    public static bool animflg = false;//再生用のフラグ
+    public GameObject MMD_model;     //MMDモデル
 
     private bool success = false;    //データの準備完了フラグ
-    private float timeleft;
     CameraData[] Cam_m;
     private int t = 0;
     private float t_f = 0.0f;
