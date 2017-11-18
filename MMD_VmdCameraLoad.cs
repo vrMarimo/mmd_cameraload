@@ -64,18 +64,23 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
     void Start () {
 
         byte[] raw_data_org = Select_VMD.bytes;
-        byte frameSum;
+        byte[] frameSum = new byte[4];
+        int frameSum_int = 0;
         byte[] frame_data = new byte[4];
         byte[] frame_data_1byte = new byte[1];
 
-        int index = HEADER + MOTIONCOUNT +SKINCOUNT; //カメラレコード数を格納している位置まで飛ばす
+        int index = HEADER + MOTIONCOUNT + SKINCOUNT; //カメラレコード数を格納している位置まで飛ばす
 
-        frameSum = raw_data_org[index];              //レコード数の取得
-        CameraData[] Cam = new CameraData[frameSum]; //レコード数分要素を用意
-        index += 4;
+        //レコード数の取得
+        frameSum[0] = raw_data_org[index++];
+        frameSum[1] = raw_data_org[index++];
+        frameSum[2] = raw_data_org[index++];
+        frameSum[3] = raw_data_org[index++];
+        frameSum_int = System.BitConverter.ToInt32(frameSum, 0);
+        CameraData[] Cam = new CameraData[frameSum_int]; //レコード数分要素を用意
 
         // データ取得
-        for (int i = 0; i < frameSum; i++)
+        for (int i = 0; i < frameSum_int; i++)
         {
             //フレーム
             frame_data[0] = raw_data_org[index++];
@@ -114,9 +119,8 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
 
         //並び順バラバラなのでソート
         Qsort(ref Cam, 0,Cam.Length-1);
-
         //以降補間処理
-        Cam_m = new CameraData[Cam[frameSum - 1].frame + 1]; //最終フレーム分用意
+        Cam_m = new CameraData[Cam[frameSum_int - 1].frame + 1]; //最終フレーム分用意
 
         //３次ベジェ曲線補間
         Cam_m[0] = Cam[0];//１レコード目をコピー
@@ -124,44 +128,45 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
         int Addframe = 0;
         int wIndex = 1;
 
-        for (int i = 0; i < frameSum - 1; i++)
+        for (int i = 0; i < frameSum_int - 1; i++)
         {
             Addframe = Cam[i + 1].frame - Cam[i].frame;
             for (int j = 1; j < Addframe; j++)
             {
+                
                 Cam_m[wIndex].frame = wIndex;
                 Cam_m[wIndex].Pos_x = Cam[i].Pos_x + (Cam[i + 1].Pos_x - Cam[i].Pos_x) * 
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[0], Cam[i + 1].Bezier[2]),
                                                    new Vector2(Cam[i + 1].Bezier[1], Cam[i + 1].Bezier[3]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].Pos_y = Cam[i].Pos_y + (Cam[i + 1].Pos_y - Cam[i].Pos_y) * 
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[4], Cam[i + 1].Bezier[6]),
                                                    new Vector2(Cam[i + 1].Bezier[5], Cam[i + 1].Bezier[7]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].Pos_z = Cam[i].Pos_z + (Cam[i + 1].Pos_z - Cam[i].Pos_z) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[8], Cam[i + 1].Bezier[10]),
                                                    new Vector2(Cam[i + 1].Bezier[9], Cam[i + 1].Bezier[11]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].Rot_x = Cam[i].Rot_x + (Cam[i + 1].Rot_x - Cam[i].Rot_x) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[12], Cam[i + 1].Bezier[14]),
                                                    new Vector2(Cam[i + 1].Bezier[13], Cam[i + 1].Bezier[15]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].Rot_y = Cam[i].Rot_y + (Cam[i + 1].Rot_y - Cam[i].Rot_y) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[12], Cam[i + 1].Bezier[14]),
                                                    new Vector2(Cam[i + 1].Bezier[13], Cam[i + 1].Bezier[15]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].Rot_z = Cam[i].Rot_z + (Cam[i + 1].Rot_z - Cam[i].Rot_z) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[12], Cam[i + 1].Bezier[14]),
                                                    new Vector2(Cam[i + 1].Bezier[13], Cam[i + 1].Bezier[15]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].distans = Cam[i].distans + (Cam[i + 1].distans - Cam[i].distans) *
                                       (BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[16], Cam[i + 1].Bezier[18]),
                                                    new Vector2(Cam[i + 1].Bezier[17], Cam[i + 1].Bezier[19]), new Vector2(127, 127),
-                                                   (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                   (float)(1.0 * j / (Addframe))).y) / 127;
                 Cam_m[wIndex].viewAngle = Cam[i].viewAngle + (Cam[i + 1].viewAngle - Cam[i].viewAngle) *
                                       (int)(BezierCurve(new Vector2(0, 0), new Vector2(Cam[i + 1].Bezier[20], Cam[i + 1].Bezier[22]),
                                                         new Vector2(Cam[i + 1].Bezier[21], Cam[i + 1].Bezier[23]), new Vector2(127, 127),
-                                                        (float)(1.0 * j / (Addframe - 1))).y) / 127;
+                                                        (float)(1.0 * j / (Addframe))).y) / 127;
                 wIndex++;
             }
             Cam_m[wIndex] = Cam[i + 1];
