@@ -48,8 +48,8 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
         public float Pos_z;     //カメラ中心のz座標
 
         public float Rot_x;     //カメラ中心のx軸回転
-        public float Rot_y;     //カメラ中心のx軸回転
-        public float Rot_z;     //カメラ中心のx軸回転
+        public float Rot_y;     //カメラ中心のy軸回転
+        public float Rot_z;     //カメラ中心のz軸回転
 
         public float viewAngle; //視野角
 
