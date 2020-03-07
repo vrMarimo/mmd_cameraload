@@ -204,7 +204,8 @@ public class MMD_VmdCameraLoad : MonoBehaviour {
                     CameraCenter.transform.localPosition = new Vector3(((Cam_m[t + 1].Pos_x - Cam_m[t].Pos_x) * t_f + Cam_m[t].Pos_x) / 12.5f + MMD_model.transform.localPosition.x,
                                                                        ((Cam_m[t + 1].Pos_y - Cam_m[t].Pos_y) * t_f + Cam_m[t].Pos_y) / 12.5f + MMD_model.transform.localPosition.y,
                                                                        ((Cam_m[t + 1].Pos_z - Cam_m[t].Pos_z) * t_f + Cam_m[t].Pos_z) / 12.5f + MMD_model.transform.localPosition.z);
-                    this.transform.localPosition = new Vector3(this.transform.localPosition.x, this.transform.localPosition.y, Cam_m[t].distans / 12.5f);
+                    float distance = ((Cam_m[t + 1].distans - Cam_m[t].distans) * t_f + Cam_m[t].distans) / 12.5f;
+                    this.transform.localPosition = new Vector3(this.transform.localPosition.x, this.transform.localPosition.y, distance);
                     CameraCenter.transform.rotation = Quaternion.Euler((-Cam_m[t + 1].Rot_x - -Cam_m[t].Rot_x) * t_f + -Cam_m[t].Rot_x,
                                                                         (-Cam_m[t + 1].Rot_y - -Cam_m[t].Rot_y) * t_f + -Cam_m[t].Rot_y,
                                                                         (-Cam_m[t + 1].Rot_z - -Cam_m[t].Rot_z) * t_f + -Cam_m[t].Rot_z);
